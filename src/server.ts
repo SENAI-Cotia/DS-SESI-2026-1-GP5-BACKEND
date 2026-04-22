@@ -10,7 +10,7 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-//cadastro////////////// - Arthur Silveira
+//Cadastro////////////// - Arthur Silveira
 app.post ("/cadastro", async (req, res) => {
   const { email, password, name, rm, curso, funcao, telnumero,  } = req.body
 
@@ -29,22 +29,35 @@ app.post ("/cadastro", async (req, res) => {
 
 })
 
-//login////////////// - Pietro Augusto
+//Login////////////// - Pietro Augusto
 app.post("/login", async (req, res) => {
-  const { rm, cpf, email, password } = req.body
+  const { email, password } = req.body
 
-  const user = await prisma.user.findFirst({ where: { rm || cpf || email } })
-
-  if (!user) {
-    return res.status(404).json({ error: "usuario não encontrado" })
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email e senha obrigatórios" })
   }
 
-  if (!(await bcrypt.compare(password, user.password))){
+  const user = await prisma.user.findUnique({
+    where: { email }
+  })
+
+  if (!user) {
     return res.status(401).json({ error: "Credenciais inválidas" })
   }
 
-  return res.status(200).json("Login realizado com sucesso!")
+  const passwordMatch = await bcrypt.compare(password, user.password)
 
+  if (!passwordMatch) {
+    return res.status(401).json({ error: "Credenciais inválidas" })
+  }
+
+  return res.status(200).json({
+    message: "Login realizado com sucesso!",
+    user: {
+      id: user.id,
+      email: user.email
+    }
+  })
 })
 
 app.listen(3000, () => {
