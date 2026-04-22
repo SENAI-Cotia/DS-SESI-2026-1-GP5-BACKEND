@@ -11,3 +11,40 @@ generator client {
 datasource db {
   provider = "sqlite"
 }
+
+model User {
+  id          Int          @id @default(autoincrement())
+  email       String
+  password    String
+  name        String
+  rm          Int
+  curso       String
+  funcao      String
+  telNumero   Int
+  produto     Produto[]
+  comentarios Comentario[]
+}
+
+model Produto {
+  id              Int          @id @default(autoincrement())
+  name            String
+  categoria       String
+  preco           Int
+  condicao        String
+  imagem          Bytes
+  descricao       String
+  disponibilidade Boolean
+  atacado         Boolean
+  userId          Int
+  user            User         @relation(fields: [userId], references: [id])
+  comentarios     Comentario[]
+}
+
+model Comentario {
+  produtoId Int     @id @default(autoincrement())
+  userId    Int
+  data      Int
+  cometario String
+  produto   Produto @relation(fields: [produtoId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+}
