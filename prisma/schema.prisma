@@ -20,7 +20,7 @@ model User {
   rm          Int
   curso       String
   funcao      String
-  telNumero   Int
+  telNumero   String
   produto     Produto[]
   comentarios Comentario[]
 }
