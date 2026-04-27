@@ -29,9 +29,9 @@ model Produto {
   id              Int          @id @default(autoincrement())
   name            String
   categoria       String
-  preco           Int
+  preco           Float
   condicao        String
-  imagem          Bytes
+  imagem          String
   descricao       String
   disponibilidade Boolean
   atacado         Boolean
