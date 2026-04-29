@@ -23,6 +23,7 @@ model User {
   telNumero   String
   produto     Produto[]
   comentarios Comentario[]
+  interesses  Interesse[]
 }
 
 model Produto {
@@ -38,6 +39,7 @@ model Produto {
   userId          Int
   user            User         @relation(fields: [userId], references: [id])
   comentarios     Comentario[]
+  interesses      Interesse[]
 }
 
 model Comentario {
@@ -47,4 +49,17 @@ model Comentario {
   cometario String
   produto   Produto @relation(fields: [produtoId], references: [id])
   user      User    @relation(fields: [userId], references: [id])
+}
+
+model Interesse {
+  id        Int      @id @default(autoincrement())
+  userId    Int // comprador
+  produtoId Int
+  local     String
+  horario   String
+  status    String   @default("pendente") // pendente | confirmado | recusado
+  createdAt DateTime @default(now())
+
+  produto Produto @relation(fields: [produtoId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
 }
