@@ -30,10 +30,10 @@ app.post("/cadastro", async (req, res) => {
   })
 
   return res.status(201).json({
-  id: user.id,
-  email: user.email,
-  name: user.name
-})
+    id: user.id,
+    email: user.email,
+    name: user.name
+  })
 
 })
 
@@ -42,35 +42,35 @@ app.post("/login", async (req, res) => {
   const { email, password } = req.body
 
   try {
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email e senha obrigatórios" })
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email }
-  })
-
-  if (!user) {
-    return res.status(401).json({ error: "Credenciais inválidas" })
-  }
-
-  const passwordMatch = await bcrypt.compare(password, user.password)
-
-  if (!passwordMatch) {
-    return res.status(401).json({ error: "Credenciais inválidas" })
-  }
-
-  return res.status(200).json({
-    message: "Login realizado com sucesso!",
-    user: {
-      id: user.id,
-      email: user.email
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email e senha obrigatórios" })
     }
-  })
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (!user) {
+      return res.status(401).json({ error: "Credenciais inválidas" })
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password)
+
+    if (!passwordMatch) {
+      return res.status(401).json({ error: "Credenciais inválidas" })
+    }
+
+    return res.status(200).json({
+      message: "Login realizado com sucesso!",
+      user: {
+        id: user.id,
+        email: user.email
+      }
+    })
 
   } catch (error) {
-  return res.status(500).json({ error: "Erro interno do servidor" })
-}
+    return res.status(500).json({ error: "Erro interno do servidor" })
+  }
 })
 
 
@@ -180,6 +180,31 @@ app.put("/interesse/:id/confirmar", async (req, res) => {
   return res.json({
     message: "Troca confirmada!",
     interesse: atualizado
+  });
+});
+
+app.put("/produtos/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { disponibilidade } = req.body;
+
+  const produto = await prisma.produto.findUnique({
+    where: { id: Number(id) }
+  });
+
+  if (!produto) {
+    return res.status(404).json({ error: "Produto não encontrado" });
+  }
+
+  const produtoAtualizado = await prisma.produto.update({
+    where: { id: Number(id) },
+    data: {
+      disponibilidade: disponibilidade !== undefined ? disponibilidade : !produto.disponibilidade
+    }
+  });
+
+  return res.json({
+    message: produtoAtualizado.disponibilidade ? "Produto à venda" : "Produto vendido",
+    produto: produtoAtualizado
   });
 });
 
