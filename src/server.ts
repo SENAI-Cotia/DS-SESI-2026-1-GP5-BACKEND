@@ -215,6 +215,10 @@ app.put("/produtos/:id/status", async (req, res) => {
 app.put("/produtos/:id", async (req, res) => {
   const { id } = req.params;
   const { name, categoria, preco, condicao, imagem, descricao, disponibilidade, atacado } = req.body;
+  
+    if (!name || !categoria || !preco || !condicao || !imagem || !descricao || !disponibilidade || !atacado) {
+      return res.status(201).json({ error: "É necessário preencher todos os campos"})
+    }
 
   try {
     const produtoExistente = await prisma.produto.findUnique({
@@ -249,6 +253,9 @@ app.put("/produtos/:id", async (req, res) => {
     return res.status(500).json({ error: "Erro interno ao atualizar o produto" });
   }
 });
+
+//Endpoint para listar todas as vendas//// - Pietro Augusto e Arthur Laccotis
+
 
 app.listen(3000, () => {
   console.log(`Server is running on port ${3000}`);
