@@ -183,6 +183,8 @@ app.put("/interesse/:id/confirmar", async (req, res) => {
   });
 });
 
+// troca status de venda//// - Pietro Augusto e Arthur Laccotis
+
 app.put("/produtos/:id/status", async (req, res) => {
   const { id } = req.params;
   const { disponibilidade } = req.body;
@@ -213,6 +215,10 @@ app.put("/produtos/:id/status", async (req, res) => {
 app.put("/produtos/:id", async (req, res) => {
   const { id } = req.params;
   const { name, categoria, preco, condicao, imagem, descricao, disponibilidade, atacado } = req.body;
+  
+    if (!name || !categoria || !preco || !condicao || !imagem || !descricao || !disponibilidade || !atacado) {
+      return res.status(201).json({ error: "É necessário preencher todos os campos"})
+    }
 
   try {
     const produtoExistente = await prisma.produto.findUnique({
@@ -236,10 +242,6 @@ app.put("/produtos/:id", async (req, res) => {
         atacado: atacado !== undefined ? (atacado === true || atacado === "true") : undefined,
       }
     });
-
-    if (!produtoAtualizado.name || !produtoAtualizado.categoria || !produtoAtualizado.preco || !produtoAtualizado.condicao || !produtoAtualizado.imagem || !produtoAtualizado.descricao || !produtoAtualizado.disponibilidade || !produtoAtualizado.atacado) {
-      return res.status(201).json({ error: "É necessário preencher todos os campos"})
-    }
 
     return res.status(200).json({
       message: "Produto atualizado com sucesso!",
