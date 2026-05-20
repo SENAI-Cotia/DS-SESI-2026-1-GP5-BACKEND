@@ -2,8 +2,10 @@ import express from "express";
 import prisma from "./lib/prisma"
 import bcrypt from "bcrypt"
 
+const cors = require('cors');
 const app = express();
 
+app.use(cors()); 
 app.use(express.json());
 
 app.get("/", (req, res) => {
