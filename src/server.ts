@@ -256,7 +256,6 @@ app.put("/produtos/:id", async (req, res) => {
   }
 });
 
-
 //Listar Produtos com filtro por categoria//// - Pietro Augusto e Arthur Laccotis
 
 app.get("/produtos", async (req, res) => {
@@ -281,6 +280,18 @@ app.get("/produtos", async (req, res) => {
 
   return res.status(200).json(produtos);
 });
+app.get("/produtos/vendidos/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const produtosVendidos = await prisma.produto.findMany({
+    where: {
+      userId: Number(id),
+      disponibilidade: false
+      }
+  })
+
+  return res.json(produtosVendidos)
+})
 
 app.listen(3000, () => {
   console.log(`Server is running on port ${3000}`);
