@@ -254,9 +254,33 @@ app.put("/produtos/:id", async (req, res) => {
   }
 });
 
-//Endpoint para listar todas as vendas//// - Pietro Augusto e Arthur Laccotis
 
+//Listar Produtos com filtro por categoria//// - Pietro Augusto e Arthur Laccotis
+
+app.get("/produtos", async (req, res) => {
+  const { categoria } = req.query;
+
+  const produtos = await prisma.produto.findMany({
+    where: {
+      disponibilidade: true,
+      ...(categoria ? { categoria: String(categoria) } : {})
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          telNumero: true,
+          curso: true
+        }
+      }
+    }
+  });
+
+  return res.status(200).json(produtos);
+});
 
 app.listen(3000, () => {
   console.log(`Server is running on port ${3000}`);
 });
+
