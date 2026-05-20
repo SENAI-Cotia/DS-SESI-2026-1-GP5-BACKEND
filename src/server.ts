@@ -243,10 +243,6 @@ app.put("/produtos/:id", async (req, res) => {
       }
     });
 
-    if (!produtoAtualizado.name || !produtoAtualizado.categoria || !produtoAtualizado.preco || !produtoAtualizado.condicao || !produtoAtualizado.imagem || !produtoAtualizado.descricao || !produtoAtualizado.disponibilidade || !produtoAtualizado.atacado) {
-      return res.status(201).json({ error: "É necessário preencher todos os campos" })
-    }
-
     return res.status(200).json({
       message: "Produto atualizado com sucesso!",
       produto: produtoAtualizado
