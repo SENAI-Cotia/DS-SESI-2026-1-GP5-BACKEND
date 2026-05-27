@@ -77,30 +77,68 @@ app.post("/login", async (req, res) => {
 
 
 //Login Produto Novo////// - Pietro Augusto & Arthur Laccotis
-app.post("/produtos", async (req, res) => {
-  const { name, categoria, preco, condicao, imagem, descricao, disponibilidade, atacado, userId } = req.body;
+app.put("/produtos/:id", async (req, res) => {
+  const { id } = req.params;
+  const {
+    name,
+    categoria,
+    preco,
+    condicao,
+    imagem,
+    descricao,
+    disponibilidade
+  } = req.body;
 
-  if (!name || !categoria || !preco || !condicao || !descricao || !userId) {
-    return res.status(400).json({ error: "Todos os campos são obrigatórios" });
+  if (
+    !name ||
+    !categoria ||
+    !preco ||
+    !condicao ||
+    !imagem ||
+    !descricao ||
+    disponibilidade === undefined
+  ) {
+    return res.status(400).json({
+      error: "É necessário preencher todos os campos"
+    });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId }
-  });
+  try {
+    const produtoExistente = await prisma.produto.findUnique({
+      where: { id: Number(id) }
+    });
 
-  if (!user) {
-    return res.status(404).json({ error: "Usuário não encontrado" });
+    if (!produtoExistente) {
+      return res.status(404).json({
+        error: "Produto não encontrado"
+      });
+    }
+
+    const produtoAtualizado = await prisma.produto.update({
+      where: { id: Number(id) },
+      data: {
+        name,
+        categoria,
+        preco,
+        condicao,
+        imagem,
+        descricao,
+        disponibilidade
+      }
+    });
+
+    return res.status(200).json({
+      message: "Produto atualizado com sucesso!",
+      produto: produtoAtualizado
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "Erro interno ao atualizar o produto"
+    });
   }
-
-  const novoProduto = await prisma.produto.create({
-    data: { name, categoria, preco, condicao, imagem, descricao, disponibilidade: disponibilidade === true || disponibilidade === "true", atacado: atacado === true || atacado === "true", userId }
-  });
-
-  return res.status(201).json({
-    message: "Seu produto foi cadastrado com sucesso!",
-    produto: novoProduto
-  })
-
 });
 
 //Interesse Produto///// - Pietro Augusto & Arthur Laccotis
@@ -216,11 +254,11 @@ app.put("/produtos/:id/status", async (req, res) => {
 
 app.put("/produtos/:id", async (req, res) => {
   const { id } = req.params;
-  const { name, categoria, preco, condicao, imagem, descricao, disponibilidade, atacado } = req.body;
-  
-    if (!name || !categoria || !preco || !condicao || !imagem || !descricao || !disponibilidade || !atacado) {
-      return res.status(201).json({ error: "É necessário preencher todos os campos"})
-    }
+  const { name, categoria, preco, condicao, imagem, descricao, disponibilidade } = req.body;
+
+  if (!name || !categoria || !preco || !condicao || !imagem || !descricao || !disponibilidade) {
+    return res.status(201).json({ error: "É necessário preencher todos os campos" })
+  }
 
   try {
     const produtoExistente = await prisma.produto.findUnique({
@@ -241,7 +279,6 @@ app.put("/produtos/:id", async (req, res) => {
         imagem: imagem !== undefined ? imagem : undefined,
         descricao: descricao !== undefined ? descricao : undefined,
         disponibilidade: disponibilidade !== undefined ? (disponibilidade === true || disponibilidade === "true") : undefined,
-        atacado: atacado !== undefined ? (atacado === true || atacado === "true") : undefined,
       }
     });
 
@@ -287,7 +324,7 @@ app.get("/produtos/vendidos/:id", async (req, res) => {
     where: {
       userId: Number(id),
       disponibilidade: false
-      }
+    }
   })
 
   return res.json(produtosVendidos)
@@ -296,4 +333,3 @@ app.get("/produtos/vendidos/:id", async (req, res) => {
 app.listen(3000, () => {
   console.log(`Server is running on port ${3000}`);
 });
-

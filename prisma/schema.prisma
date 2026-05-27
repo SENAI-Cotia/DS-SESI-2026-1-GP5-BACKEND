@@ -13,21 +13,20 @@ datasource db {
 }
 
 model User {
-  id          Int          @id @default(autoincrement())
-  email       String       @unique
-  password    String
-  name        String
-  rm          Int
-  curso       String
-  funcao      String
-  telNumero   String
-  produto     Produto[]
-  comentarios Comentario[]
-  interesses  Interesse[]
+  id         Int         @id @default(autoincrement())
+  email      String      @unique
+  password   String
+  name       String
+  rm         Int
+  curso      String
+  funcao     String
+  telNumero  String
+  produto    Produto[]
+  interesses Interesse[]
 }
 
 model Produto {
-  id              Int          @id @default(autoincrement())
+  id              Int         @id @default(autoincrement())
   name            String
   categoria       String
   preco           Float
@@ -35,31 +34,40 @@ model Produto {
   imagem          String
   descricao       String
   disponibilidade Boolean
-  atacado         Boolean
   userId          Int
-  user            User         @relation(fields: [userId], references: [id])
-  comentarios     Comentario[]
+  localId         Int
+  horarioId       Int
+  user            User        @relation(fields: [userId], references: [id])
+  local           Local       @relation(fields: [localId], references: [Id])
+  horario         Horario     @relation(fields: [horarioId], references: [id])
   interesses      Interesse[]
-}
-
-model Comentario {
-  produtoId Int     @id @default(autoincrement())
-  userId    Int
-  data      Int
-  cometario String
-  produto   Produto @relation(fields: [produtoId], references: [id])
-  user      User    @relation(fields: [userId], references: [id])
 }
 
 model Interesse {
   id        Int      @id @default(autoincrement())
   userId    Int // comprador
   produtoId Int
-  local     String
-  horario   String
+  horarioId Int
+  localId   Int
   status    String   @default("pendente") // pendente | confirmado | recusado
   createdAt DateTime @default(now())
 
   produto Produto @relation(fields: [produtoId], references: [id])
+  horario Horario @relation(fields: [horarioId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
+  local   Local   @relation(fields: [localId], references: [Id])
+}
+
+model Local {
+  Id         Int         @id @default(autoincrement())
+  local      String
+  produtos   Produto[]
+  interesses Interesse[]
+}
+
+model Horario {
+  id         Int         @id @default(autoincrement())
+  horario    Int
+  interesses Interesse[]
+  produtos   Produto[]
 }
