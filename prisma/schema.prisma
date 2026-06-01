@@ -1,65 +1,69 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id          Int          @id @default(autoincrement())
-  email       String       @unique
-  password    String
-  name        String
-  rm          Int
-  curso       String
-  funcao      String
-  telNumero   String
-  produto     Produto[]
-  comentarios Comentario[]
-  interesses  Interesse[]
+  id         Int         @id @default(autoincrement())
+  email      String      @unique
+  password   String
+  name       String
+  rm         Int
+  curso      String
+  funcao     String
+  telNumero  String
+  produto    Produto[]
+  interesses Interesse[]
 }
 
 model Produto {
-  id              Int          @id @default(autoincrement())
+  id              Int         @id @default(autoincrement())
   name            String
   categoria       String
   preco           Float
   condicao        String
-  imagem          String
+  imagem          String      // armazenará JSON string das imagens
   descricao       String
   disponibilidade Boolean
-  atacado         Boolean
   userId          Int
-  user            User         @relation(fields: [userId], references: [id])
-  comentarios     Comentario[]
+  localId         Int
+  horarioId       Int
+  user            User        @relation(fields: [userId], references: [id])
+  local           Local       @relation(fields: [localId], references: [Id])
+  horario         Horario     @relation(fields: [horarioId], references: [id])
   interesses      Interesse[]
-}
-
-model Comentario {
-  produtoId Int     @id @default(autoincrement())
-  userId    Int
-  data      Int
-  cometario String
-  produto   Produto @relation(fields: [produtoId], references: [id])
-  user      User    @relation(fields: [userId], references: [id])
 }
 
 model Interesse {
   id        Int      @id @default(autoincrement())
-  userId    Int // comprador
+  userId    Int
   produtoId Int
-  local     String
-  horario   String
-  status    String   @default("pendente") // pendente | confirmado | recusado
+  horarioId Int
+  localId   Int
+  status    String   @default("pendente")
   createdAt DateTime @default(now())
 
   produto Produto @relation(fields: [produtoId], references: [id])
+  horario Horario @relation(fields: [horarioId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
+  local   Local   @relation(fields: [localId], references: [Id])
+}
+
+model Local {
+  Id         Int         @id @default(autoincrement())
+  local      String      // armazenará JSON string do array de locais
+  produtos   Produto[]
+  interesses Interesse[]
+}
+
+model Horario {
+  id         Int         @id @default(autoincrement())
+  horario    String      // armazenará JSON string do array de horários
+  interesses Interesse[]
+  produtos   Produto[]
 }
