@@ -55,7 +55,7 @@ model Interesse {
 
 model Local {
   Id         Int         @id @default(autoincrement())
-  local      String      // armazenará JSON string do array de locais
+  local      String
   produtos   Produto[]
   interesses Interesse[]
 }
