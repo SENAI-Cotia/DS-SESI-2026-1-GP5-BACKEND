@@ -1,15 +1,11 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -28,10 +24,9 @@ model User {
 model Produto {
   id              Int         @id @default(autoincrement())
   name            String
-  categoria       String
   preco           Float
-  condicao        String
-  imagem          String
+  condicao        Int
+  imagem          String      // armazenará JSON string das imagens
   descricao       String
   disponibilidade Boolean
   userId          Int
@@ -45,11 +40,11 @@ model Produto {
 
 model Interesse {
   id        Int      @id @default(autoincrement())
-  userId    Int // comprador
+  userId    Int
   produtoId Int
   horarioId Int
   localId   Int
-  status    String   @default("pendente") // pendente | confirmado | recusado
+  status    String   @default("pendente")
   createdAt DateTime @default(now())
 
   produto Produto @relation(fields: [produtoId], references: [id])
@@ -67,7 +62,7 @@ model Local {
 
 model Horario {
   id         Int         @id @default(autoincrement())
-  horario    Int
+  horario    String      // armazenará JSON string do array de horários
   interesses Interesse[]
   produtos   Produto[]
 }
