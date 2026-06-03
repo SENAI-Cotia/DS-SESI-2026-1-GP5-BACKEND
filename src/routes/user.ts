@@ -4,6 +4,57 @@ import { prisma } from '../prisma';
 
 const router = Router();
 
+// GET /cursos — lista os cursos únicos cadastrados no sistema (fonte oficial)
+router.get('/cursos', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({ select: { curso: true } });
+    const cursos = [...new Set(users.map(u => u.curso).filter(Boolean))].sort();
+    return res.json({ cursos });
+  } catch (error) {
+    console.error('Erro ao buscar cursos:', error);
+    return res.status(500).json({ error: 'Erro ao buscar cursos' });
+  }
+});
+
+// POST /login — busca usuário no banco e verifica senha
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Email ou senha incorretos' });
+    }
+
+    const senhaCorreta = await bcrypt.compare(password, user.password);
+    if (!senhaCorreta) {
+      return res.status(401).json({ error: 'Email ou senha incorretos' });
+    }
+
+    return res.json({
+      message: 'Login realizado com sucesso',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        rm: user.rm,
+        curso: user.curso,
+        funcao: user.funcao,
+        telNumero: user.telNumero,
+      },
+    });
+  } catch (error) {
+    console.error('Erro ao fazer login:', error);
+    return res.status(500).json({ error: 'Erro interno ao fazer login' });
+  }
+});
+
+// POST /cadastro — cria novo usuário
 router.post('/cadastro', async (req, res) => {
   const { email, password, name, rm, curso, telNumero } = req.body;
 
@@ -46,6 +97,7 @@ router.post('/cadastro', async (req, res) => {
   return res.status(201).json({ message: 'Usuário criado com sucesso', user });
 });
 
+// GET /cadastro/:id — busca usuário por ID
 router.get('/cadastro/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!id) {
@@ -76,6 +128,7 @@ router.get('/cadastro/:id', async (req, res) => {
   }
 });
 
+// PUT /cadastro/:id — atualiza usuário
 router.put('/cadastro/:id', async (req, res) => {
   const id = Number(req.params.id);
   const { name, email, telNumero, curso, rm } = req.body;

@@ -22,7 +22,6 @@ Backend Express + Prisma para o projeto.
 ```json
 {
   "name": "Nome do produto",
-  "categoria": "Categoria",
   "preco": 123.45,
   "condicao": "novo",
   "imagem": "https://...",

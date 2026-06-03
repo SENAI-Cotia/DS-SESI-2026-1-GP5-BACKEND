@@ -24,9 +24,8 @@ model User {
 model Produto {
   id              Int         @id @default(autoincrement())
   name            String
-  categoria       String
   preco           Float
-  condicao        String
+  condicao        Int
   imagem          String      // armazenará JSON string das imagens
   descricao       String
   disponibilidade Boolean
