@@ -16,7 +16,6 @@ const normalizeArray = (v: any) => {
   return [v];
 };
 
-// Helper: parse produto for API response (includes user, local, horario as parsed arrays)
 function formatProduto(p: any) {
   return {
     ...p,
@@ -26,10 +25,11 @@ function formatProduto(p: any) {
   };
 }
 
-// GET /produtos — lista todos os produtos com dados do criador, local e horário
+// GET /produtos
 router.get('/', async (req, res) => {
   try {
     const products = await prisma.produto.findMany({
+      where: { disponibilidade: true },
       include: {
         user: { select: { id: true, name: true, curso: true, email: true, telNumero: true } },
         local: true,
@@ -43,76 +43,139 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /produtos/:id — produto por ID com dados do criador, local e horário
-router.get('/:id', async (req, res) => {
-  const id = Number(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
-
+// GET /produtos/meus?userId=X — produtos do usuário (inclui vendidos)
+router.get('/meus', async (req, res) => {
+  const userId = Number(req.query.userId);
+  if (!userId || isNaN(userId)) return res.status(400).json({ error: 'userId obrigatório' });
   try {
-    const product = await prisma.produto.findUnique({
-      where: { id },
+    const products = await prisma.produto.findMany({
+      where: { userId },
       include: {
         user: { select: { id: true, name: true, curso: true, email: true, telNumero: true } },
         local: true,
         horario: true,
       },
     });
-    if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
-    return res.json(formatProduto(product));
+    res.json(products.map(formatProduto));
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Erro ao buscar produto' });
+    res.status(500).json({ error: 'Erro ao buscar produtos do usuário' });
   }
 });
 
-// POST /produtos — cria produto
-router.post('/', async (req, res) => {
-  const { userId, name, preco, condicao, imagem, descricao, disponibilidade, local, horario } = req.body;
-
-  if (!userId || !name || preco === undefined || !condicao || !imagem || !descricao || disponibilidade === undefined) {
-    return res.status(400).json({ error: 'Campos obrigatórios: userId, name, preco, condicao, imagem, descricao, disponibilidade' });
-  }
-
-  const imagensArr = normalizeArray(imagem);
-  if (!imagensArr || imagensArr.length === 0 || imagensArr.length > 5)
-    return res.status(400).json({ error: 'imagem deve ser array com 1-5 itens' });
-
-  const localArr = normalizeArray(local);
-  if (localArr && localArr.length > 6) return res.status(400).json({ error: 'Máx 6 locais' });
-
-  const horarioArr = normalizeArray(horario);
-  if (horarioArr && horarioArr.length > 6) return res.status(400).json({ error: 'Máx 6 horários' });
+// GET /produtos/interesses/comprador?userId=X — interesses do usuário como comprador (Últimos Pedidos)
+router.get('/interesses/comprador', async (req, res) => {
+  const userId = Number(req.query.userId);
+  if (!userId || isNaN(userId)) return res.status(400).json({ error: 'userId obrigatório' });
 
   try {
-    const usuario = await prisma.user.findUnique({ where: { id: Number(userId) } });
-    if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado' });
-
-    const createdLocal = await prisma.local.create({ data: { local: JSON.stringify(localArr ?? []) } });
-    const createdHorario = await prisma.horario.create({ data: { horario: JSON.stringify(horarioArr ?? []) } });
-
-    const produto = await prisma.produto.create({
-      data: {
-        userId: Number(userId),
-        name,
-        preco: Number(preco),
-        condicao,
-        imagem: JSON.stringify(imagensArr),
-        descricao,
-        disponibilidade: Boolean(disponibilidade),
-        localId: createdLocal.Id,
-        horarioId: createdHorario.id,
-      },
+    const interesses = await prisma.interesse.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { id: true, name: true, curso: true, email: true, telNumero: true } },
+        produto: {
+          include: {
+            user: { select: { id: true, name: true, curso: true, email: true, telNumero: true } },
+          },
+        },
         local: true,
         horario: true,
       },
     });
 
-    return res.status(201).json({ message: 'Produto criado', produto: formatProduto(produto) });
+    const result = interesses.map(i => ({
+      id: i.id,
+      status: i.status,
+      createdAt: i.createdAt,
+      localEscolhido: typeof i.local.local === 'string' ? JSON.parse(i.local.local) : i.local.local,
+      horarioEscolhido: typeof i.horario.horario === 'string' ? JSON.parse(i.horario.horario) : i.horario.horario,
+      produto: {
+        id: i.produto.id,
+        name: i.produto.name,
+        preco: i.produto.preco,
+        condicao: i.produto.condicao,
+        descricao: i.produto.descricao,
+        disponibilidade: i.produto.disponibilidade,
+        imagem: typeof i.produto.imagem === 'string' ? JSON.parse(i.produto.imagem) : i.produto.imagem,
+      },
+      vendedor: {
+        id: i.produto.user.id,
+        name: i.produto.user.name,
+        curso: i.produto.user.curso,
+        email: i.produto.user.email,
+        telNumero: i.produto.user.telNumero,
+      },
+    }));
+
+    res.json(result);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Erro interno ao criar produto' });
+    res.status(500).json({ error: 'Erro ao buscar pedidos' });
+  }
+});
+
+// GET /produtos/interesses/vendedor?userId=X — interesses nos produtos do usuário como vendedor
+router.get('/interesses/vendedor', async (req, res) => {
+  const userId = Number(req.query.userId);
+  if (!userId || isNaN(userId)) return res.status(400).json({ error: 'userId obrigatório' });
+
+  try {
+    const interesses = await prisma.interesse.findMany({
+      where: { produto: { userId } },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, curso: true, email: true, telNumero: true } },
+        produto: { select: { id: true, name: true, preco: true } },
+        local: true,
+        horario: true,
+      },
+    });
+
+    const result = interesses.map(i => ({
+      id: i.id,
+      status: i.status,
+      createdAt: i.createdAt,
+      localEscolhido: typeof i.local.local === 'string' ? JSON.parse(i.local.local) : i.local.local,
+      horarioEscolhido: typeof i.horario.horario === 'string' ? JSON.parse(i.horario.horario) : i.horario.horario,
+      produto: {
+        id: i.produto.id,
+        name: i.produto.name,
+        preco: i.produto.preco,
+      },
+      comprador: {
+        id: i.user.id,
+        name: i.user.name,
+        curso: i.user.curso,
+        email: i.user.email,
+        telNumero: i.user.telNumero,
+      },
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao buscar interesses recebidos' });
+  }
+});
+
+// DELETE /produtos/interesses/:id — cancela/retira interesse
+router.delete('/interesses/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const { userId } = req.body;
+
+  if (!userId) return res.status(400).json({ error: 'userId obrigatório no body' });
+
+  try {
+    const interesse = await prisma.interesse.findUnique({ where: { id } });
+    if (!interesse) return res.status(404).json({ error: 'Interesse não encontrado' });
+    if (interesse.userId !== Number(userId))
+      return res.status(403).json({ error: 'Você não pode cancelar um interesse de outro usuário' });
+
+    await prisma.interesse.delete({ where: { id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao cancelar interesse' });
   }
 });
 
@@ -134,6 +197,13 @@ router.post('/interesse', async (req, res) => {
   if (!produto) return res.status(404).json({ error: 'Produto não encontrado' });
   if (produto.userId === Number(userId))
     return res.status(400).json({ error: 'Você não pode demonstrar interesse no seu próprio produto' });
+
+  // Prevent duplicate interest from same user on same product
+  const jaExiste = await prisma.interesse.findFirst({
+    where: { userId: Number(userId), produtoId: Number(produtoId) },
+  });
+  if (jaExiste)
+    return res.status(400).json({ error: 'Você já demonstrou interesse neste produto' });
 
   let usedLocalId = localId != null ? Number(localId) : undefined;
   let usedHorarioId = horarioId != null ? Number(horarioId) : undefined;
@@ -207,7 +277,79 @@ router.post('/interesse', async (req, res) => {
   }
 });
 
-// PUT /produtos/:id — atualiza produto (suporta reativar anúncio via disponibilidade: true)
+// GET /produtos/:id
+router.get('/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const product = await prisma.produto.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, name: true, curso: true, email: true, telNumero: true } },
+        local: true,
+        horario: true,
+      },
+    });
+    if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
+    return res.json(formatProduto(product));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar produto' });
+  }
+});
+
+// POST /produtos
+router.post('/', async (req, res) => {
+  const { userId, name, preco, condicao, imagem, descricao, disponibilidade, local, horario } = req.body;
+
+  if (!userId || !name || preco === undefined || !condicao || !imagem || !descricao || disponibilidade === undefined) {
+    return res.status(400).json({ error: 'Campos obrigatórios: userId, name, preco, condicao, imagem, descricao, disponibilidade' });
+  }
+
+  const imagensArr = normalizeArray(imagem);
+  if (!imagensArr || imagensArr.length === 0 || imagensArr.length > 5)
+    return res.status(400).json({ error: 'imagem deve ser array com 1-5 itens' });
+
+  const localArr = normalizeArray(local);
+  if (localArr && localArr.length > 6) return res.status(400).json({ error: 'Máx 6 locais' });
+
+  const horarioArr = normalizeArray(horario);
+  if (horarioArr && horarioArr.length > 6) return res.status(400).json({ error: 'Máx 6 horários' });
+
+  try {
+    const usuario = await prisma.user.findUnique({ where: { id: Number(userId) } });
+    if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    const createdLocal = await prisma.local.create({ data: { local: JSON.stringify(localArr ?? []) } });
+    const createdHorario = await prisma.horario.create({ data: { horario: JSON.stringify(horarioArr ?? []) } });
+
+    const produto = await prisma.produto.create({
+      data: {
+        userId: Number(userId),
+        name,
+        preco: Number(preco),
+        condicao: Number(condicao),
+        imagem: JSON.stringify(imagensArr),
+        descricao,
+        disponibilidade: Boolean(disponibilidade),
+        localId: createdLocal.Id,
+        horarioId: createdHorario.id,
+      },
+      include: {
+        user: { select: { id: true, name: true, curso: true, email: true, telNumero: true } },
+        local: true,
+        horario: true,
+      },
+    });
+
+    return res.status(201).json({ message: 'Produto criado', produto: formatProduto(produto) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro interno ao criar produto' });
+  }
+});
+
+// PUT /produtos/:id — requer userId no body para validar propriedade
 router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
@@ -218,7 +360,10 @@ router.put('/:id', async (req, res) => {
     const product = await prisma.produto.findUnique({ where: { id } });
     if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
 
-    // Se novos arrays de local/horario foram enviados, cria novas entradas
+    if (userId != null && Number(userId) !== product.userId) {
+      return res.status(403).json({ error: 'Você não tem permissão para editar este produto' });
+    }
+
     let newLocalId = product.localId;
     let newHorarioId = product.horarioId;
 
@@ -247,11 +392,11 @@ router.put('/:id', async (req, res) => {
       data: {
         name: name ?? product.name,
         preco: preco != null ? Number(preco) : product.preco,
-        condicao: condicao ?? product.condicao,
+        condicao: condicao != null ? Number(condicao) : product.condicao,
         imagem: imagem != null ? JSON.stringify(normalizeArray(imagem) ?? []) : product.imagem,
         descricao: descricao ?? product.descricao,
         disponibilidade: disponibilidade != null ? parseBoolean(disponibilidade) : product.disponibilidade,
-        userId: userId != null ? Number(userId) : product.userId,
+        userId: product.userId,
         localId: newLocalId,
         horarioId: newHorarioId,
       },
@@ -269,14 +414,23 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /produtos/:id
+// DELETE /produtos/:id — requer userId no body para validar propriedade
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
 
+  const { userId } = req.body;
+
   try {
     const product = await prisma.produto.findUnique({ where: { id } });
     if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
+
+    if (userId != null && Number(userId) !== product.userId) {
+      return res.status(403).json({ error: 'Você não tem permissão para excluir este produto' });
+    }
+
+    // Delete related interesses first (FK constraint)
+    await prisma.interesse.deleteMany({ where: { produtoId: id } });
     await prisma.produto.delete({ where: { id } });
     res.status(204).send();
   } catch (err) {
